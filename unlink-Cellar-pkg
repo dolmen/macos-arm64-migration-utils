@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+pkg="$1"
+
+if [[ -z "$pkg" ]]; then
+	exit 1
+fi
+
+if [[ "$pkg" = -a ]]; then
+	cd /usr/local/Cellar
+	for pkg in *
+	do
+		if [[ "$pkg" != .* && -d /opt/homebrew/Cellar/$pkg ]]; then
+			echo "[ $pkg ]"
+			#$0 "$pkg"
+		else
+			echo "[ $pkg ] => SKIP"
+		fi
+	done
+	exit 0
+fi
+
+cd /usr/local/bin
+
+find /usr/local/bin -type l -exec readlink '{}' \; | sed -n 's!.*/Cellar/'"$pkg"'/[^/]*/bin/\([^/]*\)$!\1!p' | while read -r f
+do
+	if readlink /usr/local/bin/"$f" | grep '/Cellar/'"$pkg"/; then
+		echo "$f"
+		rm /usr/local/bin/"$f"
+	else
+		{ echo -n "$f: "; readlink /usr/local/bin/"$f" ; } >&2
+	fi
+done
+
+rm -Rfx /usr/local/Cellar/"$pkg"

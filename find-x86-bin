@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+
+
+
+
+function scan
+{
+	if [[ "$(file "$f" | head -1)" = "$f: Mach-O 64-bit executable x86_64" ]]; then
+		if [[ -h "$f" ]]; then
+			echo "$f: $(readlink "$f")"
+		else
+			echo "$f"
+		fi
+	fi
+}
+
+if [[ "$(arch)" = amd64 ]]; then
+	echo "arch: $(arch)" >&2
+	exit 2
+fi
+
+
+if (( $# == 0 )); then
+	IFS=: read -r -a patharr <<<"$PATH"
+	for dir in "${patharr[@]}"; do
+		for f in "$dir"/*; do
+			if [[ ! -x "$f" ]]; then continue; fi
+			scan "$f"
+		done
+	done
+else
+	while getopts '?h' o; do
+		case "$o" in
+		*)
+			echo "usage: ${0#*/} [dirs...]"
+			echo
+			echo "Look for x86_64 (amd64) binaries. Default list of directories is \$PATH."
+			exit 0
+			;;
+		esac
+	done
+
+	if [[ "$1" = -- ]]; then
+		shift
+	fi
+
+	if (( $# == 0 )); then
+		exit 0
+	fi
+
+	for d
+	do
+		if [[ "$d" != /* ]]; then
+			d="./$d"
+		fi
+		find "$d" -type f -perm +111 | while read -r f
+		do
+			scan "$f"
+		done
+	done
+fi
+
